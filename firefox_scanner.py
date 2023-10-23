@@ -16,12 +16,12 @@ def read_moz_cookies(cookies_db):
         host = str(row[0])
         name = str(row[1])
         value = str(row[2])
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td></tr>" % (host, name, value)
+        line = f"<tr><td>{host}</td><td>{name}</td><td>{value}</td></tr>"
         data += line
 
     data += close_table_html()
     file_name = getFileName(cookies_db)
-    tgt = file_name + ".html"
+    tgt = f"{file_name}.html"
     saveResult(tgt, data)
 
 def read_moz_history(history_db, tm_min=0, tm_max=10000000000000, google=False, android=False):
@@ -30,14 +30,11 @@ history_db: the full path of the places sqlite database file
 tm_min: the minimum visit timestamp, default value is 0
 tm_max: the maximum visit timestamp, default value is 10000000000000
 google: Look for google searches only? default value is False'''
-    command = "SELECT url, datetime(visit_date/1000000, 'unixepoch'), title FROM moz_places, moz_historyvisits " \
-              + "WHERE (visit_count > 0) AND (moz_places.id == moz_historyvisits.place_id) AND (visit_date/1000000 > %s AND visit_date/1000000 < %s);" % (tm_min, tm_max)
+    command = f"SELECT url, datetime(visit_date/1000000, 'unixepoch'), title FROM moz_places, moz_historyvisits WHERE (visit_count > 0) AND (moz_places.id == moz_historyvisits.place_id) AND (visit_date/1000000 > {tm_min} AND visit_date/1000000 < {tm_max});"
     if android:
-        command = "SELECT url, datetime(date/1000, 'unixepoch'), title FROM history WHERE (visits > 0)" \
-                  + " AND (date/1000 > %s AND date/1000 < %s);" % (tm_min, tm_max)
+        command = f"SELECT url, datetime(date/1000, 'unixepoch'), title FROM history WHERE (visits > 0) AND (date/1000 > {tm_min} AND date/1000 < {tm_max});"
         if google:
-            command = "SELECT query, datetime(date/1000, 'unixepoch') FROM searchhistory WHERE (visits > 0)" \
-                  + " AND (date/1000 > %s AND date/1000 < %s);" % (tm_min, tm_max)
+            command = f"SELECT query, datetime(date/1000, 'unixepoch') FROM searchhistory WHERE (visits > 0) AND (date/1000 > {tm_min} AND date/1000 < {tm_max});"
     res = pull_from_db(history_db, command)
     data = init_data("firefox_scanner History", len(res)) + init_table_header("./templates/init_history_html.html")
 
@@ -45,32 +42,30 @@ google: Look for google searches only? default value is False'''
         if google:
             if android:
                 search = str(row[0])
-                date = str(row[1])
                 title = "Search"
             else:
                 url = str(row[0])
-                date = str(row[1])
                 title = str(row[2])
                 if "google" in url.lower():
-                    r = re.findall(r'q=.*\&', url)
-                    if r:
+                    if r := re.findall(r'q=.*\&', url):
                         search = r[0].split('&')[0]
                         search = search.replace('q=', '').replace('+', ' ')
-            if not search == "":
-                line = "<tr><td>%s</td><td>%s</td><td>%s</td></tr>" % (date, title, search)
+            date = str(row[1])
+            if search != "":
+                line = f"<tr><td>{date}</td><td>{title}</td><td>{search}</td></tr>"
                 data += line
         else:
             url = str(row[0])
             date = str(row[1])
             title = str(row[2])
-            if len(title) == 0:
+            if not title:
                 title = url
-            line = "<tr><td>%s</td><td>%s</td><td>%s</td></tr>" % (date, title, url)
+            line = f"<tr><td>{date}</td><td>{title}</td><td>{url}</td></tr>"
             data += line
 
     data += close_table_html()
     file_name = getFileName(history_db)
-    tgt = file_name + ".html"
+    tgt = f"{file_name}.html"
     saveResult(tgt, data)
 
 def read_moz_forms(forms_db, tm_min=0, tm_max=10000000000000):
@@ -78,20 +73,17 @@ def read_moz_forms(forms_db, tm_min=0, tm_max=10000000000000):
 forms_db: the full path of the form_history sqlite database file
 tm_min: the minimum form use timestamp, default value is 0
 tm_max: the maximum form use timestamp, default value is 10000000000000'''
-    command = "SELECT fieldname, value, timesUsed, datetime(firstUsed/1000000, 'unixepoch'), " \
-              + "datetime(lastUsed/1000000, 'unixepoch') FROM moz_formhistory WHERE (firstUsed/1000000 > %s AND firstUsed/1000000 < %s);" % (tm_min, tm_max)
+    command = f"SELECT fieldname, value, timesUsed, datetime(firstUsed/1000000, 'unixepoch'), datetime(lastUsed/1000000, 'unixepoch') FROM moz_formhistory WHERE (firstUsed/1000000 > {tm_min} AND firstUsed/1000000 < {tm_max});"
     res = pull_from_db(forms_db, command)
     data = init_data("firefox_scanner Forms History", len(res)) + init_table_header("./templates/init_formhistory_html.html")
     for row in res:
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (str(row[0]), str(row[1]),
-                                                                                     str(row[2]), str(row[3]),
-                                                                                     str(row[4]))
+        line = f"<tr><td>{str(row[0])}</td><td>{str(row[1])}</td><td>{str(row[2])}</td><td>{str(row[3])}</td><td>{str(row[4])}</td></tr>"
         data += line
 
     data += close_table_html()
     file_name = getFileName(forms_db)
-    tgt = file_name + ".html"
+    tgt = f"{file_name}.html"
     saveResult(tgt, data)
 
 def read_moz_downloads(downloads_db, tm_min=0, tm_max=10000000000000):
@@ -99,17 +91,17 @@ def read_moz_downloads(downloads_db, tm_min=0, tm_max=10000000000000):
 forms_db: the full path of the downloads sqlite database file
 tm_min: the minimum download timestamp, default value is 0
 tm_max: the maximum download timestamp, default value is 10000000000000'''
-    command = "SELECT name, source, datetime(endTime/1000000, 'unixepoch') FROM moz_downloads WHERE (endtime/1000000 > %s AND endtime/1000000 < %s);" % (tm_min, tm_max)
+    command = f"SELECT name, source, datetime(endTime/1000000, 'unixepoch') FROM moz_downloads WHERE (endtime/1000000 > {tm_min} AND endtime/1000000 < {tm_max});"
     res = pull_from_db(downloads_db, command)
     data = init_data("firefox_scanner Downloads", len(res)) + init_table_header("./templates/init_downloads_html.html")
 
     for row in res:
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td></tr>" % (row[0], row[1], row[2])
+        line = f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td></tr>"
         data += line
 
     data += close_table_html()
     file_name = getFileName(downloads_db)
-    tgt = file_name + ".html"
+    tgt = f"{file_name}.html"
     saveResult(tgt, data)
 
 if __name__ == "__main__":
@@ -144,15 +136,8 @@ if __name__ == "__main__":
 
     db = options.db
 
-    if options.min:
-        min_time = time_to_epoch(options.min)
-    else:
-        min_time = 0
-    if options.max:
-        max_time = time_to_epoch(options.min)
-    else:
-        max_time = 10000000000000
-
+    min_time = time_to_epoch(options.min) if options.min else 0
+    max_time = time_to_epoch(options.min) if options.max else 10000000000000
     try:
         android = eval(options.droid)
     except Exception:

@@ -8,13 +8,10 @@ except ImportError:
 
 
 def read_chrome_history(history_db, tm_min=0, tm_max=10000000000000, google=False):
-    command = "SELECT urls.url, title, visit_time, last_visit_time, visit_count FROM urls, visits WHERE (urls.id = visits.id)" \
-              + " AND ((visit_time/10000000) > %s AND (visit_time/10000000) < %s);" % (tm_min, tm_max)
+    command = f"SELECT urls.url, title, visit_time, last_visit_time, visit_count FROM urls, visits WHERE (urls.id = visits.id) AND ((visit_time/10000000) > {tm_min} AND (visit_time/10000000) < {tm_max});"
 
     if google:
-        command = "SELECT urls.url, title, visit_time, last_visit_time, visit_count FROM urls, visits WHERE (urls.id = visits.id)" \
-              + " AND ((visit_time/10000000) > %s AND (visit_time/10000000) < %s) " % (tm_min, tm_max) \
-              + "AND (title like '%Google%');"
+        command = f"SELECT urls.url, title, visit_time, last_visit_time, visit_count FROM urls, visits WHERE (urls.id = visits.id) AND ((visit_time/10000000) > {tm_min} AND (visit_time/10000000) < {tm_max}) AND (title like '%Google%');"
 
     res = pull_from_db(history_db, command)
     data = init_data("chrome_scanner History", len(res)) + init_table_header("./templates/init_chrome_history_html.html")
@@ -23,16 +20,18 @@ def read_chrome_history(history_db, tm_min=0, tm_max=10000000000000, google=Fals
         visit_time = dt.fromtimestamp(row[2]/10000000)
         last_visit_time = dt.fromtimestamp(row[3]/10000000)
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (visit_time, last_visit_time, row[1], row[0], row[4])
+        line = f"<tr><td>{visit_time}</td><td>{last_visit_time}</td><td>{row[1]}</td><td>{row[0]}</td><td>{row[4]}</td></tr>"
         data += line
 
     data += close_table_html()
     saveResult("chrome_history.html", data)
 
 def read_chrome_downloads(history_db, tm_min=0, tm_max=10000000000000):
-    command = "SELECT url, current_path, start_time, end_time, received_bytes, total_bytes, opened, referrer, " \
-              + "last_modified, mime_type FROM downloads, downloads_url_chains " \
-              + "WHERE (downloads_url_chains.id = downloads.id) AND (start_time/10000000 > %s AND start_time/10000000 < %s);" % (tm_min, tm_max)
+    command = (
+        "SELECT url, current_path, start_time, end_time, received_bytes, total_bytes, opened, referrer, "
+        + "last_modified, mime_type FROM downloads, downloads_url_chains "
+        + f"WHERE (downloads_url_chains.id = downloads.id) AND (start_time/10000000 > {tm_min} AND start_time/10000000 < {tm_max});"
+    )
 
     res = pull_from_db(history_db, command)
     data = init_data("chrome_scanner Downloads", len(res)) + init_table_header("./templates/init_chrome_downloads_html.html")
@@ -45,23 +44,24 @@ def read_chrome_downloads(history_db, tm_min=0, tm_max=10000000000000):
         else:
             end_time = "download interrupted"
         try:
-            pct = str(round((100 * row[4]) / row[5], 4)) + " %"
+            pct = f"{str(round(100 * row[4] / row[5], 4))} %"
         except ZeroDivisionError:
             pct = "Download size is zero"
         opened = open_dict[str(row[6])]
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>" % (start_time, end_time, row[0], row[9], row[7]) \
-               + "<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (row[1], row[5], pct, opened, row[8])
+        line = (
+            f"<tr><td>{start_time}</td><td>{end_time}</td><td>{row[0]}</td><td>{row[9]}</td><td>{row[7]}</td>"
+            + f"<td>{row[1]}</td><td>{row[5]}</td><td>{pct}</td><td>{opened}</td><td>{row[8]}</td></tr>"
+        )
         data += line
 
     data += close_table_html()
     saveResult("chrome_downloads.html", data)
 
 def read_chrome_cookies(cookies_db, tm_min=0, tm_max=10000000000000, host=None):
-    command = "SELECT name, host_key, value, creation_utc, expires_utc, last_access_utc, has_expires from cookies " \
-              + "WHERE (creation_utc/10000000 > %s AND creation_utc/10000000 < %s);" % (tm_min, tm_max)
+    command = f"SELECT name, host_key, value, creation_utc, expires_utc, last_access_utc, has_expires from cookies WHERE (creation_utc/10000000 > {tm_min} AND creation_utc/10000000 < {tm_max});"
     if host:
-        command = command[:-1] + " AND (host_key LIKE '%s');" % host
+        command = f"{command[:-1]} AND (host_key LIKE '{host}');"
 
     res = pull_from_db(cookies_db, command)
     data = init_data("chrome_scanner Cookies", len(res)) + init_table_header("./templates/init_chrome_cookies_html.html")
@@ -73,18 +73,19 @@ def read_chrome_cookies(cookies_db, tm_min=0, tm_max=10000000000000, host=None):
         last_access_date = dt.fromtimestamp(row[5]/10000000)
         exp_stat = exp_dict[str(row[6])]
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td>" % (row[1], row[0], row[2], creation_date) \
-               + "<td>%s</td><td>%s</td><td>%s</td></tr>" % (exp_date, last_access_date, exp_stat)
+        line = (
+            f"<tr><td>{row[1]}</td><td>{row[0]}</td><td>{row[2]}</td><td>{creation_date}</td>"
+            + f"<td>{exp_date}</td><td>{last_access_date}</td><td>{exp_stat}</td></tr>"
+        )
         data += line
 
     data += close_table_html()
     saveResult("chrome_cookies.html", data)
 
 def read_chrome_logins(logins_db, tm_min=0, tm_max=10000000000000, domain=None):
-    command = "SELECT action_url, username_value, password_value, signon_realm, date_created, times_used, form_data FROM logins " \
-              + "WHERE (date_created/10000000 > %s AND date_created/10000000 < %s);" % (tm_min, tm_max)
+    command = f"SELECT action_url, username_value, password_value, signon_realm, date_created, times_used, form_data FROM logins WHERE (date_created/10000000 > {tm_min} AND date_created/10000000 < {tm_max});"
     if domain:
-        command = command[:-1] + " AND (signon_realm LIKE '%s');" % domain
+        command = f"{command[:-1]} AND (signon_realm LIKE '{domain}');"
 
     res = pull_from_db(logins_db, command)
     data = init_data("chrome_scanner Logins", len(res)) + init_table_header("./templates/init_chrome_logins_html.html")
@@ -93,8 +94,10 @@ def read_chrome_logins(logins_db, tm_min=0, tm_max=10000000000000, domain=None):
         creation_date = dt.fromtimestamp(row[4]/10000000)
         form_data = row[6].decode("ISO-8859-1")
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td>" % (creation_date, row[3], row[0], row[1]) \
-               + "<td>%s</td><td>%s</td><td>%s</td></tr>" % (row[2].decode("ISO-8859-1"), row[5], form_data)
+        line = (
+            f"<tr><td>{creation_date}</td><td>{row[3]}</td><td>{row[0]}</td><td>{row[1]}</td>"
+            + f'<td>{row[2].decode("ISO-8859-1")}</td><td>{row[5]}</td><td>{form_data}</td></tr>'
+        )
         data += line
 
     data += close_table_html()

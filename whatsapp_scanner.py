@@ -8,13 +8,10 @@ except ImportError:
 
 
 def parse_col(col_val):
-    if not col_val:
-        return "Not Applicable"
-    else:
-        return str(col_val)
+    return "Not Applicable" if not col_val else str(col_val)
 
 def get_name_from_phone(wa_db, phone):
-    command = "SELECT sort_name FROM wa_contacts WHERE jid like '%{}%';".format(phone)
+    command = f"SELECT sort_name FROM wa_contacts WHERE jid like '%{phone}%';"
     res = pull_from_db(wa_db, command)
     names = [str(row[0]) for row in res if len(row) > 0]
     return "--".join(names)
@@ -27,15 +24,19 @@ partner: chat partner, default value None
 tm_min: minimum Message timestamp, default value 0
 tm_max: maximum Message timestamp, default value 10000000000000
 get_partner_name: pass True to display name instead of phone number in from/to fields'''
-    command = "SELECT key_from_me, status, data, timestamp, receipt_server_timestamp, receipt_device_timestamp," \
-              + " read_device_timestamp, played_device_timestamp, media_url, media_caption, media_duration, latitude," \
-              + " longitude, media_wa_type, needs_push, recipient_count, key_remote_jid from messages" \
-              + " WHERE (timestamp > %s AND timestamp < %s);" % (tm_min, tm_max)
+    command = (
+        "SELECT key_from_me, status, data, timestamp, receipt_server_timestamp, receipt_device_timestamp,"
+        + " read_device_timestamp, played_device_timestamp, media_url, media_caption, media_duration, latitude,"
+        + " longitude, media_wa_type, needs_push, recipient_count, key_remote_jid from messages"
+        + f" WHERE (timestamp > {tm_min} AND timestamp < {tm_max});"
+    )
     if partner:
-        command = "SELECT key_from_me, status, data, timestamp, receipt_server_timestamp, receipt_device_timestamp," \
-                  + " read_device_timestamp, played_device_timestamp, media_url, media_caption, media_duration, latitude," \
-                  + " longitude, media_wa_type, needs_push, recipient_count, key_remote_jid FROM messages" \
-                  + " WHERE (key_remote_jid LIKE '%{}%') AND (timestamp > {} AND timestamp < {});".format(partner, tm_min, tm_max)
+        command = (
+            "SELECT key_from_me, status, data, timestamp, receipt_server_timestamp, receipt_device_timestamp,"
+            + " read_device_timestamp, played_device_timestamp, media_url, media_caption, media_duration, latitude,"
+            + " longitude, media_wa_type, needs_push, recipient_count, key_remote_jid FROM messages"
+            + f" WHERE (key_remote_jid LIKE '%{partner}%') AND (timestamp > {tm_min} AND timestamp < {tm_max});"
+        )
     res = pull_from_db(msgstore_db, command)
     status_dict = {0 : "RECEIVED", 1 : "UPLOADING", 2 : "UPLOADED", 3 : "SENT BY CLIENT",
                    4 : "RECEIVED BY SERVER", 5 : "RECEIVED BY DESTINATION", 6 : "CONTROL MESSAGE"}
@@ -48,11 +49,11 @@ get_partner_name: pass True to display name instead of phone number in from/to f
     for row in res:
         if str(row[0]) == "1":
             frm = "db owner"
-            to = str(row[16])[0:str(row[16]).index('@')]
+            to = str(row[16])[:str(row[16]).index('@')]
             if get_partner_name:
                 to = get_name_from_phone(wa_db, to)
         else:
-            frm = str(row[16])[0:str(row[16]).index('@')]
+            frm = str(row[16])[:str(row[16]).index('@')]
             if get_partner_name:
                 frm = get_name_from_phone(wa_db, frm)
             to = "db owner"
@@ -70,7 +71,7 @@ get_partner_name: pass True to display name instead of phone number in from/to f
         media_url = parse_col(row[8])
         media_cap = parse_col(row[9])
         media_dur = parse_col(row[10])
-        coordinates = "long: %s, lat: %s" % (row[12], row[11])
+        coordinates = f"long: {row[12]}, lat: {row[11]}"
         try:
             msg_type = media_wa_dict[int(row[13])]
         except KeyError:
@@ -78,9 +79,13 @@ get_partner_name: pass True to display name instead of phone number in from/to f
         broadcast = broad_dict[int(row[14])]
         receivers = int(row[15])
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>" % (insert_time, server_time, receipt_time, media_play_time, read_time) \
-               + "<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>" % (frm, to, msg_type, msg_body, status, broadcast) \
-               + "<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (receivers, media_url, media_cap, media_dur, coordinates)
+        line = (
+            (
+                f"<tr><td>{insert_time}</td><td>{server_time}</td><td>{receipt_time}</td><td>{media_play_time}</td><td>{read_time}</td>"
+                + f"<td>{frm}</td><td>{to}</td><td>{msg_type}</td><td>{msg_body}</td><td>{status}</td><td>{broadcast}</td>"
+            )
+            + f"<td>{receivers}</td><td>{media_url}</td><td>{media_cap}</td><td>{media_dur}</td><td>{coordinates}</td></tr>"
+        )
         data += line
     data += close_table_html()
     tgt = "whatsapp_scanner_msgs.html"
@@ -94,12 +99,10 @@ def read_wa_contacts(wa_db):
     data = init_data("whatsapp_scanner Contacts", len(res)) + init_table_header("./templates/init_whatsapp_contacts_html.html")
 
     for row in res:
-        phone = str(row[0])[0:str(row[0]).index('@')]
+        phone = str(row[0])[:str(row[0]).index('@')]
         wa_user = wa_user_dict[row[1]]
         last_status_update = parse_timestamp(row[3])
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (row[4], row[6], wa_user,
-                                                                                                           phone, row[2], last_status_update,
-                                                                                                           row[5])
+        line = f"<tr><td>{row[4]}</td><td>{row[6]}</td><td>{wa_user}</td><td>{phone}</td><td>{row[2]}</td><td>{last_status_update}</td><td>{row[5]}</td></tr>"
         data += line
     data += close_table_html()
     tgt = "whatsapp_scanner_contacts.html"
@@ -142,15 +145,8 @@ if __name__ == "__main__":
 
     wa_db = options.wa_db
 
-    if options.min:
-        min_time = time_to_epoch(options.min)
-    else:
-        min_time = 0
-    if options.max:
-        max_time = time_to_epoch(options.min)
-    else:
-        max_time = 10000000000000
-
+    min_time = time_to_epoch(options.min) if options.min else 0
+    max_time = time_to_epoch(options.min) if options.max else 10000000000000
     get_partner_name = bool(options.get_partner_name)
 
     print("Working...")

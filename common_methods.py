@@ -11,12 +11,16 @@ def time_to_epoch(time_string):
 def get_firefox_db(db_file):
     '''Return the full path of firefox sqlite databases, platform independent'''
     success = False
-    plat_dict = {"Windows 7" : r"C:\Users\%s\AppData\Roaming\Mozilla\Firefox\Profiles" % os.getlogin(),
-                 "Windows XP" : r"C:\Documents and Settings\%s\Application Data\Mozilla\Firefox\Profiles" % os.getlogin(),
-                 "Linux" : r"/home/%s/.mozilla/firefox/" % os.getlogin(),
-                 "Darwin" : r"/Users/%s/Library/Application Support/Firefox/Profiles" % os.getlogin()}
+    plat_dict = {
+        "Windows 7": r"C:\Users\%s\AppData\Roaming\Mozilla\Firefox\Profiles"
+        % os.getlogin(),
+        "Windows XP": r"C:\Documents and Settings\%s\Application Data\Mozilla\Firefox\Profiles"
+        % os.getlogin(),
+        "Linux": f"/home/{os.getlogin()}/.mozilla/firefox/",
+        "Darwin": f"/Users/{os.getlogin()}/Library/Application Support/Firefox/Profiles",
+    }
     if platform.system() == "Windows":
-        string = plat_dict[platform.system() + " " + platform.release()]
+        string = plat_dict[f"{platform.system()} {platform.release()}"]
     else:
         string = plat_dict[platform.system()]
     for item in os.listdir(string):
@@ -41,23 +45,23 @@ def getFileName(full_path):
 def parse_value(value, integer=False, div=1):
     try:
         ret_val = "Not Applicable" if value == "" or not value else str(value)
-        if integer:
-            return "%.2f" % (int(value) / div)
-        return ret_val
+        return "%.2f" % (int(value) / div) if integer else ret_val
     except:
         return "Not Applicable"
 
 def saveResult(file_name, data):
     '''Save whatever data the scripts produce to a file...'''
     if os.path.isfile(file_name):
-            sys.exit("%s already exists! Rename or move that file to avoid losing your data!" % file_name)
+        sys.exit(
+            f"{file_name} already exists! Rename or move that file to avoid losing your data!"
+        )
 
     print("saving results to %s\n" % file_name)
     try:
         with open(file_name, "w", encoding='utf-8') as rf:
             rf.write(data)
     except IOError as ie:
-        print("Could not save the result... An IOError occured: %s" % ie)
+        print(f"Could not save the result... An IOError occured: {ie}")
     print("done! Results saved to %s...\n" % file_name)
 
 def pull_from_db(db, command, facebook_name=False):
@@ -69,9 +73,9 @@ def pull_from_db(db, command, facebook_name=False):
         return c.fetchall()
     except Exception as e:
         if facebook_name:
-            return [("Name Unavailable %s" % e,)]
+            return [(f"Name Unavailable {e}", )]
         else:
-            sys.exit("Error reading the database: %s" % e)
+            sys.exit(f"Error reading the database: {e}")
 
 def init_data(title, size):
     '''Generate static html with a time code and an appropriate title'''
@@ -94,8 +98,9 @@ def init_table_header(template_file):
             data = tf.read()
         return data
     except IOError:
-        sys.exit("Couldn't find the template file: %s. Make sure the (unmodified) templates directory is" % template_file \
-                 + " in the same directory as the script and try again...")
+        sys.exit(
+            f"Couldn't find the template file: {template_file}. Make sure the (unmodified) templates directory is in the same directory as the script and try again..."
+        )
 
 def parse_timestamp(tm_stmp):
     try:

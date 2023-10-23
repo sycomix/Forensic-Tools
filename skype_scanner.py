@@ -14,11 +14,10 @@ def read_accounts(db):
     data = init_data("skype_scanner Account", len(res)) + init_table_header("./templates/init_account_html.html")
     for row in res:
         if not row[2]:
-            loc = str(row[3]) + ", unspecified city/town"
+            loc = f"{str(row[3])}, unspecified city/town"
         else:
-            loc = str(row[3]) + ', ' + str(row[2])
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (row[0], row[1],
-                                                                          loc, row[4])
+            loc = f'{str(row[3])}, {str(row[2])}'
+        line = f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{loc}</td><td>{row[4]}</td></tr>"
         data += line
 
     data += close_table_html()
@@ -32,11 +31,10 @@ def read_contacts(db):
     data = init_data("skype_scanner Contacts", len(res)) + init_table_header("./templates/init_contacts_html.html")
     for row in res:
         if not row[2]:
-            loc = str(row[3]) + ", unspecified city/town"
+            loc = f"{str(row[3])}, unspecified city/town"
         else:
-            loc = str(row[3]) + ', ' + str(row[2])
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (row[0], row[1],
-                                                                                    loc, row[4], row[5])
+            loc = f'{str(row[3])}, {str(row[2])}'
+        line = f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{loc}</td><td>{row[4]}</td><td>{row[5]}</td></tr>"
         data += line
 
     data += close_table_html()
@@ -49,16 +47,15 @@ db: database file full path
 partner: call partner, default value None
 tm_min: minimum call timestamp, default value 0
 tm_max: maximum call timestamp, default value 10000000000000'''
-    command = "SELECT datetime(begin_timestamp, 'unixepoch'), identity, duration, is_incoming FROM calls, conversations WHERE " \
-              + "(calls.conv_dbid = conversations.id) AND (begin_timestamp > %s AND begin_timestamp < %s);" % (tm_min, tm_max)
+    command = f"SELECT datetime(begin_timestamp, 'unixepoch'), identity, duration, is_incoming FROM calls, conversations WHERE (calls.conv_dbid = conversations.id) AND (begin_timestamp > {tm_min} AND begin_timestamp < {tm_max});"
     if partner:
-        command = command[:-1] + " AND (chatname LIKE %s);" % ("'%" + partner + "%'")
+        command = f"{command[:-1]} AND (chatname LIKE '%{partner}%');"
 
     res = pull_from_db(db, command)
     data = init_data("skype_scanner Call Log", len(res)) + init_table_header("./templates/init_clog_html.html")
     for row in res:
         dir_dict = {"0" : "outgoing", "1" : "incoming"}
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (row[0], row[1], row[2], dir_dict[str(row[3])])
+        line = f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{dir_dict[str(row[3])]}</td></tr>"
         data += line
 
     data += close_table_html()
@@ -71,10 +68,9 @@ db: database file full path
 partner: chat partner, default value None
 tm_min: minimum Message timestamp, default value 0
 tm_max: maximum Message timestamp, default value 10000000000000'''
-    command = "SELECT timestamp, dialog_partner, author, body_xml, chatmsg_status, sending_status, chatname " \
-              + "FROM Messages WHERE (timestamp > %s AND timestamp < %s);" % (tm_min, tm_max)
+    command = f"SELECT timestamp, dialog_partner, author, body_xml, chatmsg_status, sending_status, chatname FROM Messages WHERE (timestamp > {tm_min} AND timestamp < {tm_max});"
     if partner:
-        command = command[:-1] + " AND (chatname LIKE %s);" % ("'%" + partner + "%'")
+        command = f"{command[:-1]} AND (chatname LIKE '%{partner}%');"
 
     res = pull_from_db(db, command)
     user = pull_from_db(db, "SELECT skypename from Accounts;")
@@ -83,17 +79,10 @@ tm_max: maximum Message timestamp, default value 10000000000000'''
     for row in res:
         try:
             if 'partlist' not in str(row[3]):
-                if row[1]:
-                    From = str(row[2])
-                    To = str(row[1])
-                else:
-                    From = str(row[2])
-                    To = str(user[0][0])
+                To = str(row[1]) if row[1] else str(user[0][0])
+                From = str(row[2])
                 status_dict = {"1" : "pending", "2" : "delivered"}
-                if str(row[5]) in ("1", "2"):
-                    status = status_dict[str(row[4])]
-                else:
-                    status = "incoming"
+                status = status_dict[str(row[4])] if str(row[5]) in {"1", "2"} else "incoming"
                 line = "\n\t\t\t\t\t<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (dt.fromtimestamp(float(row[0])),
                                                                                                                     row[6], From, To, row[3],
                                                                                                                     status)
@@ -144,24 +133,12 @@ if __name__ == "__main__":
     if options.target.lower() == "accounts":
         read_accounts(db)
     elif options.target.lower() == "msgs":
-        if options.min:
-            min_time = time_to_epoch(options.min)
-        else:
-            min_time = 0
-        if options.max:
-            max_time = time_to_epoch(options.min)
-        else:
-            max_time = 10000000000000
+        min_time = time_to_epoch(options.min) if options.min else 0
+        max_time = time_to_epoch(options.min) if options.max else 10000000000000
         read_msgs(db, options.partner, min_time, max_time)
     elif options.target.lower() == "clog":
-        if options.min:
-            min_time = time_to_epoch(options.min)
-        else:
-            min_time = 0
-        if options.max:
-            max_time = time_to_epoch(options.min)
-        else:
-            max_time = 10000000000000
+        min_time = time_to_epoch(options.min) if options.min else 0
+        max_time = time_to_epoch(options.min) if options.max else 10000000000000
         read_call_log(db, options.partner, min_time, max_time)
     elif options.target.lower() == "contacts":
         read_contacts(db)

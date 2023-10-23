@@ -10,18 +10,16 @@ except ImportError:
 
 
 def val2addr(val):
-    if val:
-        addr = ""
-        for char in val:
-            try:
-                addr += ("%02x " % ord(char))
-            except:
-                addr += ("%02x " % ord(chr(char)))
-        addr = addr.strip(" ").replace(" ", ":")[:17]
-        return True, addr
-    else:
-        addr = "No data found for this network"
-        return False, addr
+    if not val:
+        return False, "No data found for this network"
+    addr = ""
+    for char in val:
+        try:
+            addr += ("%02x " % ord(char))
+        except:
+            addr += ("%02x " % ord(chr(char)))
+    addr = addr.strip(" ").replace(" ", ":")[:17]
+    return True, addr
 
 def get_WIFIs():
     wlans = r'SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList' \
@@ -37,7 +35,7 @@ def get_WIFIs():
             (n, name, t) = EnumValue(wlan_key, 4)
             res, mac_address = val2addr(addr)
             wlan_name = str(name)
-            data += "<tr><td>%s</td><td>%s</td></tr>" % (wlan_name,  mac_address)
+            data += f"<tr><td>{wlan_name}</td><td>{mac_address}</td></tr>"
             CloseKey(wlan_key)
             num += 1
         except Exception as e:

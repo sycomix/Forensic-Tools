@@ -29,11 +29,11 @@ def getExif(image_file, save=True, verbose=True):
         sys.exit("No EXIF data found!")
 
     for key in exif_data:
-        data += "{}    :   {}\n".format(key, exif_data[key])
+        data += f"{key}    :   {exif_data[key]}\n"
 
     if save:
         name = getFileName(image_file)
-        tgt = name + ".txt"
+        tgt = f"{name}.txt"
         saveResult(tgt, data)
 
     if verbose:
@@ -58,15 +58,7 @@ if __name__ == "__main__":
         sys.exit(parser.usage)
 
     save = options.save
-    if not save:
-        save = True
-    else:
-        save = eval(save.title())
-
+    save = True if not save else eval(save.title())
     verbose = options.verbose
-    if not verbose:
-        verbose = False
-    else:
-        verbose = eval(verbose.title())
-
+    verbose = False if not verbose else eval(verbose.title())
     getExif(path, save, verbose)

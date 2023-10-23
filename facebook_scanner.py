@@ -40,8 +40,10 @@ def read_fb_contacts(core_db="core.db"):
         last_seen_update = parse_timestamp(row[5])
         friend = "Yes" if str(row[6]) == "1" else "No"
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td>" % (name, account_url, profile_pic, blocked) \
-             + "<td>%s</td><td>%s</td><td>%s</td></tr>" % (last_seen, last_seen_update, friend)
+        line = (
+            f"<tr><td>{name}</td><td>{account_url}</td><td>{profile_pic}</td><td>{blocked}</td>"
+            + f"<td>{last_seen}</td><td>{last_seen_update}</td><td>{friend}</td></tr>"
+        )
         data += line
 
     data += close_table_html()
@@ -49,23 +51,25 @@ def read_fb_contacts(core_db="core.db"):
     saveResult("facebook_scanner_contacts.html", data)
 
 def read_fb_messages(core_db, partner=None, tm_min=0, tm_max=10000000000000):
-    db_owner = get_db_owner(os.path.split(core_db)[0] + "/cross_account.db")
+    db_owner = get_db_owner(f"{os.path.split(core_db)[0]}/cross_account.db")
 
-    command = "SELECT sender, thread_key, timestamp, snippet, is_unsent, attachment_filename, attachment_filesize, " \
-            + "attachment_mime_type, media_playable_url, voice_call_duration_s, voice_call_start_time, " \
-            + "is_voice_call_answered, is_voice_call_incoming, user_id from messages " \
-            + "WHERE (timestamp > %s AND timestamp < %s);" % (tm_min, tm_max)
+    command = (
+        "SELECT sender, thread_key, timestamp, snippet, is_unsent, attachment_filename, attachment_filesize, "
+        + "attachment_mime_type, media_playable_url, voice_call_duration_s, voice_call_start_time, "
+        + "is_voice_call_answered, is_voice_call_incoming, user_id from messages "
+        + f"WHERE (timestamp > {tm_min} AND timestamp < {tm_max});"
+    )
 
     if partner:
         user_id = get_uid_from_name(partner, core_db)
-        command = command[:-1] + " AND (sender = \"{}\" OR thread_key LIKE \"%{}\");".format(partner, user_id)
+        command = f'{command[:-1]} AND (sender = \"{partner}\" OR thread_key LIKE \"%{user_id}\");'
 
     res = pull_from_db(core_db, command)
 
     data = init_data("facebook_messenger Messages", len(res)) + init_table_header("./templates/init_fb_msngr_msgs_html.html")
 
     for row in res:
-        sender = str(row[0]) if row[0] else "Database owner: " + db_owner
+        sender = str(row[0]) if row[0] else f"Database owner: {db_owner}"
         threadKey = str(row[1])
         time = parse_timestamp(row[2])
         contents = str(row[3])
@@ -73,18 +77,30 @@ def read_fb_messages(core_db, partner=None, tm_min=0, tm_max=10000000000000):
         attachment_name = str(row[5])
         attachment_size = parse_value(str(row[6]), integer=True, div=1024)
         attachment_type = parse_value(str(row[7]))
-        media_url = "<a href='%s' target='_blank'>Link</a>" % parse_value(str(row[8])) if row[8] else "Not Applicable"
+        media_url = (
+            f"<a href='{parse_value(str(row[8]))}' target='_blank'>Link</a>"
+            if row[8]
+            else "Not Applicable"
+        )
         voice_call_dur = parse_value(str(row[9]), integer=True, div= 60)
         voice_call_start = parse_timestamp(row[10])
         call_answered = "Yes" if str(row[11]) == 1 else "No/ Not Applicable"
         call_direction = "incoming" if str(row[12]) == "1" else "outgoing" if str(row[12]) == "0" else "Not Applicable"
 
-        recipient = "Database owner: %s" % db_owner if (threadKey.split(":")[1] == str(row[13])) or "GROUP:" in threadKey else get_name_from_threadKey(threadKey, core_db)
+        recipient = (
+            f"Database owner: {db_owner}"
+            if (threadKey.split(":")[1] == str(row[13]))
+            or "GROUP:" in threadKey
+            else get_name_from_threadKey(threadKey, core_db)
+        )
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>" % (sender, recipient, time, contents, sent) \
-             + "<td>%s</td><td>%s</td><td>%s</td>" % (attachment_name, attachment_size, attachment_type) \
-             + "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>" %(media_url, voice_call_start, call_answered, call_direction) \
-             + "<td>%s</td></tr>" % voice_call_dur
+        line = (
+            (
+                f"<tr><td>{sender}</td><td>{recipient}</td><td>{time}</td><td>{contents}</td><td>{sent}</td>"
+                + f"<td>{attachment_name}</td><td>{attachment_size}</td><td>{attachment_type}</td>"
+            )
+            + f"<td>{media_url}</td><td>{voice_call_start}</td><td>{call_answered}</td><td>{call_direction}</td>"
+        ) + f"<td>{voice_call_dur}</td></tr>"
         data += line
 
     data += close_table_html()
@@ -93,9 +109,11 @@ def read_fb_messages(core_db, partner=None, tm_min=0, tm_max=10000000000000):
 
 
 def read_fb_call_log(core_db, partner=None, tm_min=0, tm_max=10000000000000):
-    command = "SELECT thread_name, updated_timestamp, is_incoming, " \
-            + "is_answered, attempt_count FROM aggregated_calls " \
-            + "WHERE (updated_timestamp > %s AND updated_timestamp < %s);" % (tm_min, tm_max)
+    command = (
+        "SELECT thread_name, updated_timestamp, is_incoming, "
+        + "is_answered, attempt_count FROM aggregated_calls "
+        + f"WHERE (updated_timestamp > {tm_min} AND updated_timestamp < {tm_max});"
+    )
 
     if partner:
         command = command[:-1] + " AND thread_name = \"%s\";" % partner
@@ -109,8 +127,10 @@ def read_fb_call_log(core_db, partner=None, tm_min=0, tm_max=10000000000000):
         direction = "incoming" if str(row[2]) == "1" else "outgoing"
         answered = "Yes" if str(row[3]) == "1" else "No"
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td>" % (call_partner, call_time, direction)\
-             + "<td>%s</td><td>%s</td></tr>" % (answered, row[4])
+        line = (
+            f"<tr><td>{call_partner}</td><td>{call_time}</td><td>{direction}</td>"
+            + f"<td>{answered}</td><td>{row[4]}</td></tr>"
+        )
         data += line
 
     data += close_table_html()
@@ -129,7 +149,7 @@ def read_fb_accounts(cross_account_db):
         profile_pic = '<a href="%s" target="_blank"><img src="%s" alt="%s\'s Avatar"></a>' % (str(row[2]), str(row[2]), str(row[1]))
         nonce = parse_value(row[3])
 
-        line = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td>" % (name, profile_pic, account_url, nonce)
+        line = f"<tr><td>{name}</td><td>{profile_pic}</td><td>{account_url}</td><td>{nonce}</td>"
         data += line
 
     data += close_table_html()

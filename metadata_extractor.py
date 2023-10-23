@@ -54,7 +54,7 @@ Last Modification Time: %s\nXML Modification Time: %s\nLast Access Time: %s""" %
 
     if save:
         file_name = getFileName(file_path)
-        tgt = file_name + ".txt"
+        tgt = f"{file_name}.txt"
 
         saveResult(tgt, metadata)
 
@@ -88,27 +88,24 @@ def oleMetaData(file_path, save=True):
 
         if save:
             file_name = getFileName(file_path)
-            tgt = file_name + ".txt"
+            tgt = f"{file_name}.txt"
 
             saveResult(tgt, metadata)
-            
+
     except OSError as e1:
-        print("File not supported: %s" % e1)
-    except FileNotFoundError:
-        print("Specified file could not be found")
+        print(f"File not supported: {e1}")
 
 def pretifyPyPDF2Time(key, val):
     '''Make PyPDF2 time code more readable'''
-    if "D:" in val and "Date" in key:
-        temp = list(val)
-        temp.insert(6, "-")
-        temp.insert(9, "-")
-        temp.insert(12, "  ")
-        temp.insert(15, ":")
-        temp.insert(18, ":")
-        return "".join(temp)
-    else:
+    if "D:" not in val or "Date" not in key:
         return val
+    temp = list(val)
+    temp.insert(6, "-")
+    temp.insert(9, "-")
+    temp.insert(12, "  ")
+    temp.insert(15, ":")
+    temp.insert(18, ":")
+    return "".join(temp)
 
 def pdfMetaData(file_path, save=True):
     '''Get PDF document metadata, takes 2 arguments, file_path and save (boolean, default is True)'''
@@ -130,7 +127,10 @@ def pdfMetaData(file_path, save=True):
                                                                                                now.second, file_name[:-4])
     try:
         for md in doc_info:
-            metadata += str(md[1:]) + " : " + pretifyPyPDF2Time(str(md[1:]) ,str(doc_info[md])) + "\n"
+            metadata += (
+                f"{str(md[1:])} : {pretifyPyPDF2Time(str(md[1:]), str(doc_info[md]))}"
+                + "\n"
+            )
     except TypeError:
         sys.exit("Couldn't read document info! Make sure target is a valid pdf document...")
 
@@ -145,7 +145,7 @@ def pdfMetaData(file_path, save=True):
 
     if save:
         file_name = getFileName(file_path)
-        tgt = file_name + ".txt"
+        tgt = f"{file_name}.txt"
 
         saveResult(tgt, metadata)
 
@@ -167,11 +167,7 @@ if __name__ == "__main__":
         sys.exit(parser.usage)
 
     save = options.save
-    if not save:
-        save = True
-    else:
-        save = eval(save.title())
-
+    save = True if not save else eval(save.title())
     if any(path.endswith(ext) for ext in (".docx", ".pptx", ".xlsx", ".vsdx", "thmx", "xltx", ".potx", ".vtx", ".ppsx", ".pub", ".zip")):
         compMetaData(path, save)
     elif path.endswith(".pdf"):
